@@ -36,6 +36,8 @@ dotnet add package Aloe.Utils.Json
 
 ## 使用方法
 
+### 基本的な使い方
+
 ```csharp
 using Aloe.Utils.Json;
 
@@ -44,10 +46,36 @@ var person = new Person { Name = "John", Age = 30 };
 string json = person.ToJson();
 
 // JSONをオブジェクトに変換
-var deserializedPerson = json.FromJson<Person>();
+var deserializedPerson = json.ToObj<Person>();
 
 // JSON文字列を整形
 string formattedJson = json.FormatJson();
+```
+
+### AOT/トリミング対応版の使い方
+
+Native AOTやトリミングを使用する場合は、`JsonSerializerContext`を定義して`JsonTypeInfo`を渡すオーバーロードを使用します。
+
+```csharp
+using System.Text.Json.Serialization;
+using Aloe.Utils.Json;
+
+// JsonSerializerContextを定義
+[JsonSerializable(typeof(Person))]
+[JsonSerializable(typeof(JsonElement))]
+internal partial class AppJsonContext : JsonSerializerContext
+{
+}
+
+// オブジェクトをJSONに変換（AOT対応）
+var person = new Person { Name = "John", Age = 30 };
+string json = person.ToJson(AppJsonContext.Default.Person);
+
+// JSONをオブジェクトに変換（AOT対応）
+var deserializedPerson = json.ToObj(AppJsonContext.Default.Person);
+
+// JSON文字列を整形（AOT対応）
+string formattedJson = json.FormatJson(AppJsonContext.Default.JsonElement);
 ```
 
 ## 注意事項

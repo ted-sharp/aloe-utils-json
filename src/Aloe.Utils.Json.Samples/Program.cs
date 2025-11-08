@@ -2,6 +2,75 @@
 using Microsoft.Extensions.Configuration;
 using Aloe.Utils.Json;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json.Serialization;
+
+// ========================================
+// JsonExtensions の使い方デモ
+// ========================================
+Console.WriteLine("=== Aloe.Utils.Json Demo ===");
+Console.WriteLine();
+
+// 1. ToJson() - オブジェクトをJSONに変換
+var person = new Person
+{
+    Name = "Alice",
+    Age = 30,
+    Email = "alice@example.com"
+};
+
+string json = person.ToJson();
+Console.WriteLine("1. ToJson() - オブジェクト → JSON:");
+Console.WriteLine(json);
+Console.WriteLine();
+
+// 2. ToObj() - JSONをオブジェクトに変換
+var jsonString = """
+    {
+        "Name": "Bob",
+        "Age": 25,
+        "Email": "bob@example.com"
+    }
+    """;
+
+var deserializedPerson = jsonString.ToObj<Person>();
+Console.WriteLine("2. ToObj() - JSON → オブジェクト:");
+Console.WriteLine($"Name: {deserializedPerson?.Name}, Age: {deserializedPerson?.Age}, Email: {deserializedPerson?.Email}");
+Console.WriteLine();
+
+// 3. FormatJson() - JSON文字列を整形
+var compactJson = """{"Name":"Charlie","Age":35,"Email":"charlie@example.com"}""";
+var formattedJson = compactJson.FormatJson();
+Console.WriteLine("3. FormatJson() - JSON整形:");
+Console.WriteLine(formattedJson);
+Console.WriteLine();
+
+// 4. ToJson(JsonTypeInfo) - AOT/トリミング対応版
+var aotPerson = new Person
+{
+    Name = "David",
+    Age = 28,
+    Email = "david@example.com"
+};
+var aotJson = aotPerson.ToJson(AppJsonContext.Default.Person);
+Console.WriteLine("4. ToJson(JsonTypeInfo) - AOT/トリミング対応:");
+Console.WriteLine(aotJson);
+Console.WriteLine();
+
+// 5. ToObj(JsonTypeInfo) - AOT/トリミング対応版
+var aotJsonString = """
+    {
+        "Name": "Eve",
+        "Age": 32,
+        "Email": "eve@example.com"
+    }
+    """;
+var aotDeserializedPerson = aotJsonString.ToObj(AppJsonContext.Default.Person);
+Console.WriteLine("5. ToObj(JsonTypeInfo) - AOT/トリミング対応:");
+Console.WriteLine($"Name: {aotDeserializedPerson?.Name}, Age: {aotDeserializedPerson?.Age}, Email: {aotDeserializedPerson?.Email}");
+Console.WriteLine();
+
+Console.WriteLine("=== Configuration Manager Demo ===");
+Console.WriteLine();
 
 // 1. .NET 9以降の最小ホスト ビルダーを作成
 var builder = Host.CreateApplicationBuilder(args);
@@ -9,13 +78,9 @@ var builder = Host.CreateApplicationBuilder(args);
 // 2. ConfigurationManager に対してベースパスと JSON ファイルを設定
 builder.Configuration
     .SetBasePath(AppContext.BaseDirectory)
-    .AddAllJsonFiles("*.json");
-    //.AddJsonFiles(
-    //[
-    //    "appsettings.json",
-    //    "appsettings.PostgreSQL.json",
-    //    "appsettings.Serilog.json"
-    //]);
+    .AddJsonFile("appsettings.json", optional: true)
+    .AddJsonFile("appsettings.PostgreSQL.json", optional: true)
+    .AddJsonFile("appsettings.Serilog.json", optional: true);
 
 // 3. ビルドして IHost を生成
 using var host = builder.Build();
@@ -53,3 +118,25 @@ Console.WriteLine();
 Console.WriteLine("Press any key to exit...");
 Console.ReadKey();
 Console.WriteLine();
+
+// ========================================
+// 型定義（トップレベルステートメントの後に配置）
+// ========================================
+
+/// <summary>
+/// サンプル用のPersonクラス
+/// </summary>
+public class Person
+{
+    public string Name { get; set; } = string.Empty;
+    public int Age { get; set; }
+    public string Email { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// AOT/トリミング対応用のJsonSerializerContext
+/// </summary>
+[JsonSerializable(typeof(Person))]
+internal partial class AppJsonContext : JsonSerializerContext
+{
+}

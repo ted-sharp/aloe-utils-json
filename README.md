@@ -36,6 +36,8 @@ dotnet add package Aloe.Utils.Json
 
 ## Usage
 
+### Basic Usage
+
 ```csharp
 using Aloe.Utils.Json;
 
@@ -44,10 +46,36 @@ var person = new Person { Name = "John", Age = 30 };
 string json = person.ToJson();
 
 // Deserialize JSON to an object
-var deserializedPerson = json.FromJson<Person>();
+var deserializedPerson = json.ToObj<Person>();
 
 // Format a JSON string
 string formattedJson = json.FormatJson();
+```
+
+### AOT/Trimming-Compatible Usage
+
+When using Native AOT or trimming, define a `JsonSerializerContext` and use the overloads that accept `JsonTypeInfo`.
+
+```csharp
+using System.Text.Json.Serialization;
+using Aloe.Utils.Json;
+
+// Define a JsonSerializerContext
+[JsonSerializable(typeof(Person))]
+[JsonSerializable(typeof(JsonElement))]
+internal partial class AppJsonContext : JsonSerializerContext
+{
+}
+
+// Serialize an object to JSON (AOT-compatible)
+var person = new Person { Name = "John", Age = 30 };
+string json = person.ToJson(AppJsonContext.Default.Person);
+
+// Deserialize JSON to an object (AOT-compatible)
+var deserializedPerson = json.ToObj(AppJsonContext.Default.Person);
+
+// Format a JSON string (AOT-compatible)
+string formattedJson = json.FormatJson(AppJsonContext.Default.JsonElement);
 ```
 
 ## Note
