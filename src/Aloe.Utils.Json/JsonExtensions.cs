@@ -32,6 +32,7 @@ public static class JsonExtensions
     /// </summary>
     /// <typeparam name="T">変換するオブジェクトの型。</typeparam>
     /// <param name="obj">変換するオブジェクト。</param>
+    /// <param name="options">シリアル化オプション。nullの場合はDefaultOptionsが使用されます。</param>
     /// <returns>JSON文字列。</returns>
     /// <exception cref="ArgumentNullException">objがnullの場合。</exception>
     /// <exception cref="InvalidOperationException">シリアル化に失敗した場合。</exception>
@@ -39,17 +40,20 @@ public static class JsonExtensions
         "JSON serialization and deserialization might require types that cannot be statically analyzed.")]
     [RequiresDynamicCode(
         "JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
-    public static string ToJson<T>(this T obj)
+    public static string ToJson<T>(this T obj, JsonSerializerOptions? options = null)
     {
-        ArgumentNullException.ThrowIfNull(obj);
+        ArgumentNullException.ThrowIfNull(obj, nameof(obj));
 
         try
         {
-            return JsonSerializer.Serialize(obj, DefaultOptions);
+            return JsonSerializer.Serialize(obj, options ?? DefaultOptions);
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException("Failed to serialize object to JSON", ex);
+            throw new InvalidOperationException(
+                $"Failed to serialize object of type '{typeof(T).Name}' to JSON. " +
+                $"Parameter: {nameof(obj)}. See inner exception for details.",
+                ex);
         }
     }
 
@@ -64,8 +68,8 @@ public static class JsonExtensions
     /// <exception cref="InvalidOperationException">シリアル化に失敗した場合。</exception>
     public static string ToJson<T>(this T obj, JsonTypeInfo<T> jsonTypeInfo)
     {
-        ArgumentNullException.ThrowIfNull(obj);
-        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+        ArgumentNullException.ThrowIfNull(obj, nameof(obj));
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo, nameof(jsonTypeInfo));
 
         try
         {
@@ -73,7 +77,10 @@ public static class JsonExtensions
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException("Failed to serialize object to JSON", ex);
+            throw new InvalidOperationException(
+                $"Failed to serialize object of type '{typeof(T).Name}' to JSON using JsonTypeInfo. " +
+                $"Parameters: {nameof(obj)}, {nameof(jsonTypeInfo)}. See inner exception for details.",
+                ex);
         }
     }
 
@@ -82,6 +89,7 @@ public static class JsonExtensions
     /// </summary>
     /// <typeparam name="T">変換先のオブジェクトの型。</typeparam>
     /// <param name="json">変換するJSON文字列。</param>
+    /// <param name="options">デシリアル化オプション。nullの場合はDefaultOptionsが使用されます。</param>
     /// <returns>変換されたオブジェクト。</returns>
     /// <exception cref="ArgumentException">jsonがnullまたは空文字列の場合。</exception>
     /// <exception cref="InvalidOperationException">デシリアル化に失敗した場合。</exception>
@@ -89,17 +97,20 @@ public static class JsonExtensions
         "JSON serialization and deserialization might require types that cannot be statically analyzed.")]
     [RequiresDynamicCode(
         "JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
-    public static T? ToObj<T>(this string json)
+    public static T? ToObj<T>(this string json, JsonSerializerOptions? options = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
 
         try
         {
-            return JsonSerializer.Deserialize<T>(json, DefaultOptions);
+            return JsonSerializer.Deserialize<T>(json, options ?? DefaultOptions);
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException("Failed to deserialize JSON to object", ex);
+            throw new InvalidOperationException(
+                $"Failed to deserialize JSON to object of type '{typeof(T).Name}'. " +
+                $"Parameter: {nameof(json)}. See inner exception for details.",
+                ex);
         }
     }
 
@@ -115,8 +126,8 @@ public static class JsonExtensions
     /// <exception cref="InvalidOperationException">デシリアル化に失敗した場合。</exception>
     public static T? ToObj<T>(this string json, JsonTypeInfo<T> jsonTypeInfo)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo, nameof(jsonTypeInfo));
 
         try
         {
@@ -124,7 +135,69 @@ public static class JsonExtensions
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException("Failed to deserialize JSON to object", ex);
+            throw new InvalidOperationException(
+                $"Failed to deserialize JSON to object of type '{typeof(T).Name}' using JsonTypeInfo. " +
+                $"Parameters: {nameof(json)}, {nameof(jsonTypeInfo)}. See inner exception for details.",
+                ex);
+        }
+    }
+
+    /// <summary>
+    ///     JSON文字列をオブジェクトに変換を試みます。
+    /// </summary>
+    /// <typeparam name="T">変換先のオブジェクトの型。</typeparam>
+    /// <param name="json">変換するJSON文字列。</param>
+    /// <param name="result">変換されたオブジェクト。変換に失敗した場合はdefault(T)。</param>
+    /// <returns>変換に成功した場合はtrue、それ以外はfalse。</returns>
+    [RequiresUnreferencedCode(
+        "JSON serialization and deserialization might require types that cannot be statically analyzed.")]
+    [RequiresDynamicCode(
+        "JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
+    public static bool TryToObj<T>(this string json, [NotNullWhen(true)] out T? result)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            result = default;
+            return false;
+        }
+
+        try
+        {
+            result = JsonSerializer.Deserialize<T>(json, DefaultOptions);
+            return result is not null;
+        }
+        catch (JsonException)
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     JSON文字列をオブジェクトに変換を試みます（AOT/トリミング対応版）。
+    /// </summary>
+    /// <typeparam name="T">変換先のオブジェクトの型。</typeparam>
+    /// <param name="json">変換するJSON文字列。</param>
+    /// <param name="jsonTypeInfo">デシリアル化に使用する型情報。</param>
+    /// <param name="result">変換されたオブジェクト。変換に失敗した場合はdefault(T)。</param>
+    /// <returns>変換に成功した場合はtrue、それ以外はfalse。</returns>
+    public static bool TryToObj<T>(this string json, JsonTypeInfo<T> jsonTypeInfo, [NotNullWhen(true)] out T? result)
+    {
+        if (string.IsNullOrWhiteSpace(json) || jsonTypeInfo is null)
+        {
+            result = default;
+            return false;
+        }
+
+        try
+        {
+            result = JsonSerializer.Deserialize(json, jsonTypeInfo);
+            return result is not null;
+        }
+        catch (JsonException)
+        {
+            result = default;
+            return false;
         }
     }
 
@@ -166,6 +239,7 @@ public static class JsonExtensions
     ///     JSON文字列を整形します。
     /// </summary>
     /// <param name="json">整形するJSON文字列。</param>
+    /// <param name="options">シリアル化オプション。nullの場合はDefaultOptionsが使用されます。</param>
     /// <returns>整形されたJSON文字列。</returns>
     /// <exception cref="ArgumentException">jsonがnullまたは空文字列の場合。</exception>
     /// <exception cref="InvalidOperationException">JSON整形に失敗した場合。</exception>
@@ -173,43 +247,21 @@ public static class JsonExtensions
         "JSON serialization and deserialization might require types that cannot be statically analyzed.")]
     [RequiresDynamicCode(
         "JSON serialization and deserialization might require types that cannot be statically analyzed and might need runtime code generation.")]
-    public static string FormatJson(this string json)
+    public static string FormatJson(this string json, JsonSerializerOptions? options = null)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
+        ArgumentException.ThrowIfNullOrWhiteSpace(json, nameof(json));
 
         try
         {
             using var document = JsonDocument.Parse(json);
-            return JsonSerializer.Serialize(document.RootElement, DefaultOptions);
+            return JsonSerializer.Serialize(document.RootElement, options ?? DefaultOptions);
         }
         catch (JsonException ex)
         {
-            throw new InvalidOperationException("Failed to format JSON string", ex);
-        }
-    }
-
-    /// <summary>
-    ///     JSON文字列を整形します（AOT/トリミング対応版）。
-    /// </summary>
-    /// <param name="json">整形するJSON文字列。</param>
-    /// <param name="jsonTypeInfo">シリアル化に使用する型情報。</param>
-    /// <returns>整形されたJSON文字列。</returns>
-    /// <exception cref="ArgumentException">jsonがnullまたは空文字列の場合。</exception>
-    /// <exception cref="ArgumentNullException">jsonTypeInfoがnullの場合。</exception>
-    /// <exception cref="InvalidOperationException">JSON整形に失敗した場合。</exception>
-    public static string FormatJson(this string json, JsonTypeInfo<JsonElement> jsonTypeInfo)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(json);
-        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            return JsonSerializer.Serialize(document.RootElement, jsonTypeInfo);
-        }
-        catch (JsonException ex)
-        {
-            throw new InvalidOperationException("Failed to format JSON string", ex);
+            throw new InvalidOperationException(
+                $"Failed to format JSON string. " +
+                $"Parameter: {nameof(json)}. See inner exception for details.",
+                ex);
         }
     }
 }

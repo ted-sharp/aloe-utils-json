@@ -69,6 +69,41 @@ Console.WriteLine("5. ToObj(JsonTypeInfo) - AOT/トリミング対応:");
 Console.WriteLine($"Name: {aotDeserializedPerson?.Name}, Age: {aotDeserializedPerson?.Age}, Email: {aotDeserializedPerson?.Email}");
 Console.WriteLine();
 
+// 6. TryToObj() - 例外を発生させずに変換を試みる
+var validJson = """{"Name":"Frank","Age":40,"Email":"frank@example.com"}""";
+var invalidJson = """{"invalid json}""";
+
+Console.WriteLine("6. TryToObj() - 安全な変換:");
+if (validJson.TryToObj<Person>(out var validPerson))
+{
+    Console.WriteLine($"✓ 成功: {validPerson.Name}, {validPerson.Age}");
+}
+if (!invalidJson.TryToObj<Person>(out var invalidPerson))
+{
+    Console.WriteLine("✓ 不正なJSONは安全に処理されました");
+}
+Console.WriteLine();
+
+// 7. JsonSerializerOptions - カスタムオプションの使用
+var customOptions = new System.Text.Json.JsonSerializerOptions
+{
+    WriteIndented = false,
+    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+};
+
+var customPerson = new Person { Name = "Grace", Age = 27, Email = "grace@example.com" };
+var customJson = customPerson.ToJson(customOptions);
+Console.WriteLine("7. ToJson(JsonSerializerOptions) - カスタムオプション:");
+Console.WriteLine(customJson);
+Console.WriteLine();
+
+// 8. FormatJson(JsonSerializerOptions) - カスタムオプションで整形
+var compactJson2 = """{"Name":"Henry","Age":45}""";
+var formattedCompact = compactJson2.FormatJson(customOptions);
+Console.WriteLine("8. FormatJson(JsonSerializerOptions) - コンパクト整形:");
+Console.WriteLine(formattedCompact);
+Console.WriteLine();
+
 Console.WriteLine("=== Configuration Manager Demo ===");
 Console.WriteLine();
 

@@ -15,6 +15,9 @@
 * 拡張メソッドによる簡単なJSONシリアライズとデシリアライズ
 * 適切なインデントによるJSON文字列のフォーマット
 * オブジェクトとJSON間の型安全な変換
+* 例外を発生させないTry系メソッドのサポート
+* カスタム`JsonSerializerOptions`のサポート
+* Native AOT/トリミング対応（`JsonTypeInfo`版メソッド）
 
 ## 対応環境
 
@@ -52,6 +55,48 @@ var deserializedPerson = json.ToObj<Person>();
 string formattedJson = json.FormatJson();
 ```
 
+### Try系メソッド - 例外を発生させない安全な変換
+
+```csharp
+using Aloe.Utils.Json;
+
+string json = """{"Name":"John","Age":30}""";
+
+// 例外を発生させずに変換を試みる
+if (json.TryToObj<Person>(out var person))
+{
+    Console.WriteLine($"成功: {person.Name}");
+}
+else
+{
+    Console.WriteLine("変換に失敗しました");
+}
+```
+
+### JsonSerializerOptions - カスタムオプションの使用
+
+```csharp
+using System.Text.Json;
+using Aloe.Utils.Json;
+
+// カスタムオプションを定義
+var options = new JsonSerializerOptions
+{
+    WriteIndented = false,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+};
+
+// カスタムオプションでシリアライズ
+var person = new Person { Name = "John", Age = 30 };
+string json = person.ToJson(options);
+
+// カスタムオプションでデシリアライズ
+var deserializedPerson = json.ToObj<Person>(options);
+
+// カスタムオプションで整形
+string formattedJson = json.FormatJson(options);
+```
+
 ### AOT/トリミング対応版の使い方
 
 Native AOTやトリミングを使用する場合は、`JsonSerializerContext`を定義して`JsonTypeInfo`を渡すオーバーロードを使用します。
@@ -62,7 +107,6 @@ using Aloe.Utils.Json;
 
 // JsonSerializerContextを定義
 [JsonSerializable(typeof(Person))]
-[JsonSerializable(typeof(JsonElement))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }
@@ -74,8 +118,11 @@ string json = person.ToJson(AppJsonContext.Default.Person);
 // JSONをオブジェクトに変換（AOT対応）
 var deserializedPerson = json.ToObj(AppJsonContext.Default.Person);
 
-// JSON文字列を整形（AOT対応）
-string formattedJson = json.FormatJson(AppJsonContext.Default.JsonElement);
+// Try系メソッド（AOT対応）
+if (json.TryToObj(AppJsonContext.Default.Person, out var aotPerson))
+{
+    Console.WriteLine($"成功: {aotPerson.Name}");
+}
 ```
 
 ## 注意事項

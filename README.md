@@ -15,6 +15,9 @@
 * Simple JSON serialization and deserialization with extension methods
 * JSON string formatting with proper indentation
 * Type-safe conversion between objects and JSON
+* Try-pattern methods that don't throw exceptions
+* Support for custom `JsonSerializerOptions`
+* Native AOT/trimming support with `JsonTypeInfo` overloads
 
 ## Supported Environments
 
@@ -52,6 +55,48 @@ var deserializedPerson = json.ToObj<Person>();
 string formattedJson = json.FormatJson();
 ```
 
+### Try-Pattern Methods - Safe Conversion Without Exceptions
+
+```csharp
+using Aloe.Utils.Json;
+
+string json = """{"Name":"John","Age":30}""";
+
+// Try to convert without throwing exceptions
+if (json.TryToObj<Person>(out var person))
+{
+    Console.WriteLine($"Success: {person.Name}");
+}
+else
+{
+    Console.WriteLine("Conversion failed");
+}
+```
+
+### JsonSerializerOptions - Using Custom Options
+
+```csharp
+using System.Text.Json;
+using Aloe.Utils.Json;
+
+// Define custom options
+var options = new JsonSerializerOptions
+{
+    WriteIndented = false,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+};
+
+// Serialize with custom options
+var person = new Person { Name = "John", Age = 30 };
+string json = person.ToJson(options);
+
+// Deserialize with custom options
+var deserializedPerson = json.ToObj<Person>(options);
+
+// Format with custom options
+string formattedJson = json.FormatJson(options);
+```
+
 ### AOT/Trimming-Compatible Usage
 
 When using Native AOT or trimming, define a `JsonSerializerContext` and use the overloads that accept `JsonTypeInfo`.
@@ -62,7 +107,6 @@ using Aloe.Utils.Json;
 
 // Define a JsonSerializerContext
 [JsonSerializable(typeof(Person))]
-[JsonSerializable(typeof(JsonElement))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }
@@ -74,8 +118,11 @@ string json = person.ToJson(AppJsonContext.Default.Person);
 // Deserialize JSON to an object (AOT-compatible)
 var deserializedPerson = json.ToObj(AppJsonContext.Default.Person);
 
-// Format a JSON string (AOT-compatible)
-string formattedJson = json.FormatJson(AppJsonContext.Default.JsonElement);
+// Try-pattern methods (AOT-compatible)
+if (json.TryToObj(AppJsonContext.Default.Person, out var aotPerson))
+{
+    Console.WriteLine($"Success: {aotPerson.Name}");
+}
 ```
 
 ## Note

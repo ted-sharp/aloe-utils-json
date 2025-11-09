@@ -155,16 +155,26 @@ public partial class JsonExtensionsTests
         Assert.Equal(expected.Age, actual.Age);
     }
 
-    [Fact(DisplayName = "FormatJson_JsonTypeInfo版_正常系_JSONが整形されること")]
-    public void FormatJson_JsonTypeInfo版_正常系_JSONが整形されること()
+    [Fact(DisplayName = "FormatJson_JsonSerializerOptions版_正常系_カスタムオプションで整形できること")]
+    public void FormatJson_JsonSerializerOptions版_正常系_カスタムオプションで整形できること()
     {
         // Arrange
-        var input = """
-            {
-                "Name": "Test",
-                "Age": 20
-            }
-            """;
+        var input = """{"Name":"Test","Age":20}""";
+        var expected = """{"Name":"Test","Age":20}""";
+        var options = new JsonSerializerOptions { WriteIndented = false };
+
+        // Act
+        var actual = input.FormatJson(options);
+
+        // Assert
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact(DisplayName = "FormatJson_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること")]
+    public void FormatJson_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること()
+    {
+        // Arrange
+        var input = """{"Name":"Test","Age":20}""";
         var expected = """
             {
               "Name": "Test",
@@ -173,9 +183,182 @@ public partial class JsonExtensionsTests
             """;
 
         // Act
-        var actual = input.FormatJson(TestJsonContext.Default.JsonElement);
+        var actual = input.FormatJson(options: null);
 
         // Assert
         Assert.Equal(expected, actual);
+    }
+
+    [Fact(DisplayName = "TryToObj_正常系_デシリアライズできること")]
+    public void TryToObj_正常系_デシリアライズできること()
+    {
+        // Arrange
+        var json = """
+            {
+                "Name": "Test",
+                "Age": 20
+            }
+            """;
+
+        // Act
+        var result = json.TryToObj<SampleClass>(out var actual);
+
+        // Assert
+        Assert.True(result);
+        Assert.NotNull(actual);
+        Assert.Equal("Test", actual.Name);
+        Assert.Equal(20, actual.Age);
+    }
+
+    [Fact(DisplayName = "TryToObj_異常系_不正なJSONの場合はfalseを返すこと")]
+    public void TryToObj_異常系_不正なJSONの場合はfalseを返すこと()
+    {
+        // Arrange
+        var invalidJson = "{invalid json}";
+
+        // Act
+        var result = invalidJson.TryToObj<SampleClass>(out var actual);
+
+        // Assert
+        Assert.False(result);
+        Assert.Null(actual);
+    }
+
+    [Fact(DisplayName = "TryToObj_異常系_空文字列の場合はfalseを返すこと")]
+    public void TryToObj_異常系_空文字列の場合はfalseを返すこと()
+    {
+        // Arrange
+        var emptyJson = string.Empty;
+
+        // Act
+        var result = emptyJson.TryToObj<SampleClass>(out var actual);
+
+        // Assert
+        Assert.False(result);
+        Assert.Null(actual);
+    }
+
+    [Fact(DisplayName = "TryToObj_JsonTypeInfo版_正常系_デシリアライズできること")]
+    public void TryToObj_JsonTypeInfo版_正常系_デシリアライズできること()
+    {
+        // Arrange
+        var json = """
+            {
+                "Name": "Test",
+                "Age": 20
+            }
+            """;
+
+        // Act
+        var result = json.TryToObj(TestJsonContext.Default.SampleClass, out var actual);
+
+        // Assert
+        Assert.True(result);
+        Assert.NotNull(actual);
+        Assert.Equal("Test", actual.Name);
+        Assert.Equal(20, actual.Age);
+    }
+
+    [Fact(DisplayName = "TryToObj_JsonTypeInfo版_異常系_不正なJSONの場合はfalseを返すこと")]
+    public void TryToObj_JsonTypeInfo版_異常系_不正なJSONの場合はfalseを返すこと()
+    {
+        // Arrange
+        var invalidJson = "{invalid json}";
+
+        // Act
+        var result = invalidJson.TryToObj(TestJsonContext.Default.SampleClass, out var actual);
+
+        // Assert
+        Assert.False(result);
+        Assert.Null(actual);
+    }
+
+    [Fact(DisplayName = "TryToObj_JsonTypeInfo版_異常系_jsonTypeInfoがnullの場合はfalseを返すこと")]
+    public void TryToObj_JsonTypeInfo版_異常系_jsonTypeInfoがnullの場合はfalseを返すこと()
+    {
+        // Arrange
+        var json = """
+            {
+                "Name": "Test",
+                "Age": 20
+            }
+            """;
+
+        // Act
+        var result = json.TryToObj<SampleClass>(null!, out var actual);
+
+        // Assert
+        Assert.False(result);
+        Assert.Null(actual);
+    }
+
+    [Fact(DisplayName = "ToJson_JsonSerializerOptions版_正常系_カスタムオプションでシリアライズできること")]
+    public void ToJson_JsonSerializerOptions版_正常系_カスタムオプションでシリアライズできること()
+    {
+        // Arrange
+        var sample = new SampleClass { Name = "Test", Age = 20 };
+        var options = new JsonSerializerOptions { WriteIndented = false };
+        var expected = """{"Name":"Test","Age":20}""";
+
+        // Act
+        var actual = sample.ToJson(options);
+
+        // Assert
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact(DisplayName = "ToJson_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること")]
+    public void ToJson_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること()
+    {
+        // Arrange
+        var sample = new SampleClass { Name = "Test", Age = 20 };
+        var expected = """
+            {
+              "Name": "Test",
+              "Age": 20
+            }
+            """;
+
+        // Act
+        var actual = sample.ToJson(options: null);
+
+        // Assert
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact(DisplayName = "ToObj_JsonSerializerOptions版_正常系_カスタムオプションでデシリアライズできること")]
+    public void ToObj_JsonSerializerOptions版_正常系_カスタムオプションでデシリアライズできること()
+    {
+        // Arrange
+        var json = """{"Name":"Test","Age":20}""";
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        // Act
+        var actual = json.ToObj<SampleClass>(options);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal("Test", actual.Name);
+        Assert.Equal(20, actual.Age);
+    }
+
+    [Fact(DisplayName = "ToObj_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること")]
+    public void ToObj_JsonSerializerOptions版_正常系_オプションがnullの場合はDefaultOptionsが使用されること()
+    {
+        // Arrange
+        var json = """
+            {
+                "Name": "Test",
+                "Age": 20
+            }
+            """;
+
+        // Act
+        var actual = json.ToObj<SampleClass>(options: null);
+
+        // Assert
+        Assert.NotNull(actual);
+        Assert.Equal("Test", actual.Name);
+        Assert.Equal(20, actual.Age);
     }
 }
